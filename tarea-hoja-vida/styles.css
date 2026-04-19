@@ -1,0 +1,46 @@
+body {
+    font-family: Arial, sans-serif;
+    background-color: #f4f4f4;
+}
+
+.container {
+    width: 80%;
+    margin: auto;
+}
+
+.section {
+    background: rgb(45, 176, 236);
+    padding: 20px;
+    margin: 15px 0;
+    border-radius: 10px;
+}
+
+.personal {
+    text-align: center;
+}
+
+.personal img {
+    width: 150px;
+    height: 150px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 3px solid #3866aa;
+}
+
+h1, h2 {
+    color: #050505;
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+table, th, td {
+    border: 1px solid rgb(160, 168, 37);
+}
+
+th, td {
+    padding: 10px;
+    text-align: center;
+}
