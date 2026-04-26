@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Registro de Informacion</title>
+    <link rel="stylesheet" href="estilos.css">
+</head>
+<body>
+
+    <div class="contenedor">
+        <h2>Ingreso de Datos</h2>
+
+        <form id="formulario">
+            <label>Nombres:</label>
+            <input type="text" name="nombres" required>
+
+            <label>Apellidos:</label>
+            <input type="text" name="apellidos" required>
+
+            <label>Cédula:</label>
+            <input type="text" name="cedula" maxlength="10" pattern="[0-9]{1,10}" required>
+
+            <label>Dirección:</label>
+            <input type="text" name="direccion" required>
+
+            <label>Teléfono:</label>
+            <input type="tel" name="telefono" maxlength="10" pattern="[0-9]{1,10}" required>
+
+            <label>Correo Electrónico:</label>
+            <input type="email" name="correo" required>
+
+            <button type="submit">Guardar</button>
+        </form>
+    </div>
+
+    <script>
+        const form = document.getElementById("formulario");
+
+        form.addEventListener("submit", function(e) {
+            e.preventDefault(); 
+            alert("Gracias por tu registro");
+        });
+    </script>
+
+</body>
+</html>
