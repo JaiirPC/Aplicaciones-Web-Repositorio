@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hotel Uleam - Panel Administrador</title>
+    <link rel="stylesheet" href="styles.css">
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+</head>
+<body>
+    <div id="app">
+        <header class="hero-header">
+            <div class="nav-header">
+                <div class="brand">
+                    
+                </div>
+                <nav class="main-nav">
+                    <a href="index.html" class="nav-btn">Volver al inicio</a>
+                </nav>
+            </div>
+            <div class="hero-copy">
+                <h1>Panel de Administrador</h1>
+                <p>Gestiona accesos, habitaciones, reservas y clientes desde una página separada.</p>
+            </div>
+        </header>
+
+        <main class="container">
+            <div id="admin-page" class="admin-page" v-if="currentRole === 'Admin' && currentUser">
+                <div class="admin-topbar">
+                    <div>
+                        <h2>Administrador Hotel Uleam</h2>
+                        <p>Usa el menú lateral para navegar entre las funcionalidades administrativas.</p>
+                    </div>
+                    <button class="btn-primary" style="width:auto;" @click="cerrarSesion">Cerrar sesión</button>
+                </div>
+
+                
+
+                <div class="dashboard-layout">
+                    <aside class="sidebar">
+                        <ul>
+                            <li :class="{active: panelAdminActivo === 'gestion-habitaciones'}" @click="cambiarPanelAdmin('gestion-habitaciones')">Gestión de Habitaciones</li>
+                            <li :class="{active: panelAdminActivo === 'gestion-reservas'}" @click="cambiarPanelAdmin('gestion-reservas')">Gestión de Reservas</li>
+                            <li :class="{active: panelAdminActivo === 'revision-clientes'}" @click="cambiarPanelAdmin('revision-clientes')">Revisión de Clientes</li>
+                            <li :class="{active: panelAdminActivo === 'reportes'}" @click="cambiarPanelAdmin('reportes')">Reportes</li>
+                            <li :class="{active: panelAdminActivo === 'config-general'}" @click="cambiarPanelAdmin('config-general')">Configuración General</li>
+                        </ul>
+                    </aside>
+
+                    <section class="admin-content">
+
+                        <div id="tab-gestion-habitaciones" class="tab-content" :class="{active: panelAdminActivo === 'gestion-habitaciones'}">
+                            <h3>Gestión de Habitaciones</h3>
+                            <p>Crea, elimina y controla el estado de las habitaciones.</p>
+                            <div class="admin-box" style="margin-bottom:20px; padding:16px; background:#fff; border-radius:8px; box-shadow:0 1px 4px rgba(0,0,0,0.08);">
+                                <h4>Crear nueva habitación</h4>
+                                <form @submit.prevent="adminAddRoom">
+                                    <div class="form-group">
+                                        <label for="admin-room-type">Tipo de habitación</label>
+                                        <select id="admin-room-type" v-model="nuevaHabitacion.type">
+                                            <option value="Individual">Individual</option>
+                                            <option value="Doble">Doble</option>
+                                            <option value="Familiar">Familiar</option>
+                                            <option value="Suite">Suite</option>
+                                            <option value="Múltiple">Múltiple</option>
+                                        </select>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="admin-room-size">Tamaño</label>
+                                        <input type="text" id="admin-room-size" v-model="nuevaHabitacion.size" placeholder="Pequeña, Mediana, Grande">
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="admin-room-price">Precio por noche</label>
+                                        <input type="number" id="admin-room-price" v-model.number="nuevaHabitacion.price" min="0" step="1" placeholder="50">
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="admin-room-status">Estado inicial</label>
+                                        <select id="admin-room-status" v-model="nuevaHabitacion.status">
+                                            <option value="Disponible">Disponible</option>
+                                            <option value="Reservada">Reservada</option>
+                                            <option value="Mantenimiento">Mantenimiento</option>
+                                            <option value="No disponible">No disponible</option>
+                                        </select>
+                                    </div>
+                                    <div class="form-group">
+                                        <label>Servicios</label>
+                                        <div style="display:flex; gap:10px; flex-wrap:wrap;">
+                                            <label><input type="checkbox" id="admin-room-wifi" v-model="nuevaHabitacion.wifi"> Wi-Fi</label>
+                                            <label><input type="checkbox" id="admin-room-ac" v-model="nuevaHabitacion.airConditioning"> Aire acondicionado</label>
+                                            <label><input type="checkbox" id="admin-room-dinner" v-model="nuevaHabitacion.dinner"> Cena incluida</label>
+                                        </div>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="admin-room-schedule">Horario de check-in/out</label>
+                                        <input type="text" id="admin-room-schedule" v-model="nuevaHabitacion.schedule" placeholder="Ej. 14:00 - 12:00">
+                                    </div>
+                                    <button type="submit" class="btn-primary">Agregar habitación</button>
+                                </form>
+                            </div>
+                            <div class="table-wrapper">
+                                <table>
+                                    <thead>
+                                        <tr>
+                                            <th>ID</th>
+                                            <th>Tipo</th>
+                                            <th>Tamaño</th>
+                                            <th>Wi-Fi</th>
+                                            <th>A/C</th>
+                                            <th>Cena</th>
+                                            <th>Estado</th>
+                                            <th>Precio</th>
+                                            <th>Acciones</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr v-for="rm in rooms" :key="rm.id">
+                                            <td>{{ rm.id }}</td>
+                                            <td>{{ rm.type }}</td>
+                                            <td>{{ rm.size }}</td>
+                                            <td>{{ rm.wifi ? 'Sí' : 'No' }}</td>
+                                            <td>{{ rm.airConditioning ? 'Sí' : 'No' }}</td>
+                                            <td>{{ rm.dinner ? 'Sí' : 'No' }}</td>
+                                            <td><room-status-badge :status="rm.status"></room-status-badge></td>
+                                            <td>${{ rm.price }}</td>
+                                            <td style="display:flex; gap:6px; flex-wrap:wrap;">
+                                                <button class="btn-secondary" style="width:auto;" @click="initAdminRoomEdit(rm)">Editar</button>
+                                                <button class="btn-danger" style="width:auto;" @click="eliminarHabitacion(rm.id)">Eliminar</button>
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            <div class="admin-box" id="admin-edit-room-box" style="margin-top:20px;" v-if="mostrarCardEdicion">
+                                <h4>Editar habitación</h4>
+                                <p id="admin-edit-room-status">Editando habitación {{ editRoomModel.id }}.</p>
+                                <form @submit.prevent="guardarCambiosHabitacion">
+                                    <div class="form-group">
+                                        <label for="admin-edit-room-type">Tipo de habitación</label>
+                                        <select id="admin-edit-room-type" v-model="editRoomModel.type">
+                                            <option value="Individual">Individual</option>
+                                            <option value="Doble">Doble</option>
+                                            <option value="Familiar">Familiar</option>
+                                            <option value="Suite">Suite</option>
+                                            <option value="Múltiple">Múltiple</option>
+                                        </select>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="admin-edit-room-size">Tamaño</label>
+                                        <input type="text" id="admin-edit-room-size" v-model="editRoomModel.size" placeholder="Pequeña, Mediana, Grande">
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="admin-edit-room-price">Precio por noche</label>
+                                        <input type="number" id="admin-edit-room-price" v-model.number="editRoomModel.price" min="0" step="1" placeholder="50">
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="admin-edit-room-status">Estado</label>
+                                        <select id="admin-edit-room-status" v-model="editRoomModel.status">
+                                            <option value="Disponible">Disponible</option>
+                                            <option value="Reservada">Reservada</option>
+                                            <option value="Mantenimiento">Mantenimiento</option>
+                                            <option value="No disponible">No disponible</option>
+                                        </select>
+                                    </div>
+                                    <div class="form-group">
+                                        <label>Servicios</label>
+                                        <div style="display:flex; gap:10px; flex-wrap:wrap;">
+                                            <label><input type="checkbox" id="admin-edit-room-wifi" v-model="editRoomModel.wifi"> Wi-Fi</label>
+                                            <label><input type="checkbox" id="admin-edit-room-ac" v-model="editRoomModel.airConditioning"> Aire acondicionado</label>
+                                            <label><input type="checkbox" id="admin-edit-room-dinner" v-model="editRoomModel.dinner"> Cena incluida</label>
+                                        </div>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="admin-edit-room-schedule">Horario de check-in/out</label>
+                                        <input type="text" id="admin-edit-room-schedule" v-model="editRoomModel.schedule" placeholder="Ej. 14:00 - 12:00">
+                                    </div>
+                                    <div style="display:flex; gap:10px; flex-wrap:wrap;">
+                                        <button type="submit" class="btn-primary" style="width:auto;">Guardar cambios</button>
+                                        <button type="button" class="btn-secondary" style="width:auto;" @click="cancelAdminEditRoom">Cancelar</button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+
+                        <div id="tab-gestion-reservas" class="tab-content" :class="{active: panelAdminActivo === 'gestion-reservas'}">
+                            <h3>Gestión de Reservas</h3>
+                            <div class="table-wrapper">
+                                <table>
+                                    <thead>
+                                        <tr>
+                                            <th>ID</th>
+                                            <th>Cliente</th>
+                                            <th>Habitación</th>
+                                            <th>Entrada</th>
+                                            <th>Salida</th>
+                                            <th>Estado</th>
+                                            <th>Acciones</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr v-for="res in reservations" :key="res.id">
+                                            <td>{{ res.id }}</td>
+                                            <td>{{ res.clientName }}</td>
+                                            <td>{{ res.roomId }}</td>
+                                            <td>{{ res.checkIn }}</td>
+                                            <td>{{ res.checkOut }}</td>
+                                            <td><room-status-badge :status="res.status"></room-status-badge></td>
+                                            <td style="display:flex; gap:6px; flex-wrap:wrap;">
+                                                <button class="btn-secondary" style="width:auto;" @click="openAdminMessage(res)">Notificar</button>
+                                                <button class="btn-danger" style="width:auto;" v-if="res.status === 'Activa'" @click="forzarCancelarReservaDirecta(res.id)">Cancelar</button>
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+
+                        <div id="tab-revision-clientes" class="tab-content" :class="{active: panelAdminActivo === 'revision-clientes'}">
+                            <h3>Revisión de Clientes</h3>
+                            <p>Consulta perfiles, historial y roles autorizados de cada cliente.</p>
+                            <div id="admin-client-review">
+                                <div class="profile-card" v-for="cl in clients" :key="cl.email">
+                                    <h3>{{ cl.name }}</h3>
+                                    <p><strong>Correo:</strong> {{ cl.email }} &nbsp; <strong>Teléfono:</strong> {{ cl.phone }} &nbsp; <strong>ID:</strong> {{ cl.id }}</p>
+                                    <p><strong>Rol:</strong> {{ cl.role }} &nbsp; <strong>Reservas realizadas:</strong> {{ reservations.filter(r => r.clientEmail === cl.email).length }} &nbsp; <strong>Fecha de registro:</strong> {{ cl.fechaRegistro || 'No disponible' }}</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div id="tab-reportes" class="tab-content" :class="{active: panelAdminActivo === 'reportes'}">
+                            <h3>Reportes</h3>
+                            <div class="report-grid">
+                                <div class="report-card"><strong>Total reservas:</strong> <span>{{ reporteTotalReservas }}</span></div>
+                                <div class="report-card"><strong>Reservas activas:</strong> <span>{{ reporteReservasActivas }}</span></div>
+                                <div class="report-card"><strong>Habitaciones libres:</strong> <span>{{ reporteHabitacionesDisponibles }}</span></div>
+                                <div class="report-card"><strong>Ingresos estimados:</strong> <span>${{ reporteIngresosEstimados }}</span></div>
+                            </div>
+
+                            <div class="admin-box" style="margin-top:24px;">
+                                <h4>Opiniones de Clientes sobre Habitaciones</h4>
+                                <div class="notification-list">
+                                    <div class="review-card" v-for="op in reviews" :key="op.id">
+                                        <h3 style="margin:0 0 6px 0; border:none;">Habitación {{ op.roomId }} &mdash; {{ op.roomType }}</h3>
+                                        <p style="margin:2px 0; color:#666; font-size:0.85rem;">{{ op.clientName }} · {{ op.fecha }}</p>
+                                        <p style="margin:8px 0 0 0;">{{ op.comentario }}</p>
+                                    </div>
+                                    <p class="reservation-empty" v-if="reviews.length === 0">Aún no hay opiniones registradas.</p>
+                                </div>
+                            </div>
+
+                            <div class="admin-box" style="margin-top:24px;">
+                                <div class="admin-topbar" style="margin-bottom:14px;">
+                                    <h4 style="margin:0; border:none;">Reporte de Uso de Habitaciones</h4>
+                                    <button class="btn-primary" style="width:auto;" @click="generarReporteUso">Generar Reporte</button>
+                                </div>
+                                <div class="table-wrapper">
+                                    <table>
+                                        <thead>
+                                            <tr>
+                                                <th>Nombre</th>
+                                                <th>Apellido</th>
+                                                <th>Correo</th>
+                                                <th>Habitación</th>
+                                                <th>Entrada</th>
+                                                <th>Salida</th>
+                                                <th>Estado</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <tr v-for="rep in reporteUso" :key="rep.id">
+                                                <td>{{ rep.nombre }}</td>
+                                                <td>{{ rep.apellido }}</td>
+                                                <td>{{ rep.correo }}</td>
+                                                <td>{{ rep.habitacion }}</td>
+                                                <td>{{ rep.checkIn }}</td>
+                                                <td>{{ rep.checkOut }}</td>
+                                                <td><room-status-badge :status="rep.estado"></room-status-badge></td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                    <p class="reservation-empty" v-if="reporteUso.length === 0">Aún no se ha generado ningún reporte. Presiona "Generar Reporte".</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div id="tab-config-general" class="tab-content" :class="{active: panelAdminActivo === 'config-general'}">
+                            <h3>Configuración General de Habitaciones</h3>
+                            <p>Define el tipo, capacidad, Wi-Fi y precios de las habitaciones.</p>
+                            <div class="config-grid">
+                                <div class="config-card">
+                                    <h4>Tipos disponibles</h4>
+                                    <ul>
+                                        <li>Individual</li>
+                                        <li>Doble</li>
+                                        <li>Familiar</li>
+                                        <li>Suite</li>
+                                    </ul>
+                                </div>
+                                <div class="config-card">
+                                    <h4>Opciones de habitación</h4>
+                                    <ul>
+                                        <li>Grande</li>
+                                        <li>Pequeña</li>
+                                        <li>Individual</li>
+                                        <li>Múltiple</li>
+                                        <li>Con internet disponible</li>
+                                    </ul>
+                                </div>
+                                <div class="config-card">
+                                    <h4>Precios y horarios</h4>
+                                    <p>Modifica precios, horarios de check-in y tiempo de estadía desde el administrador.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+                </div>
+            </div>
+
+            <div class="card" v-else>
+                <h3>No has iniciado sesión como administrador</h3>
+                <p>Inicia sesión como administrador desde la página principal para ver este panel.</p>
+                <a href="index.html" class="btn-primary" style="display:inline-block; width:auto; text-decoration:none; text-align:center;">Ir al inicio</a>
+            </div>
+        </main>
+
+        <div id="admin-notify-modal" class="notification-modal" aria-hidden="true" v-if="mostrarCardNotificacion">
+            <div class="notification-modal-card">
+                <div class="notification-modal-header">
+                    <div>
+                        <p class="notification-modal-kicker">Comunicación interna</p>
+                        <h3 id="admin-notify-title">Notificar a {{ notiModel.clientName }}</h3>
+                    </div>
+                </div>
+                <p id="admin-notify-description" class="notification-modal-description">Escribe un mensaje personalizado para el cliente seleccionado.</p>
+                <form @submit.prevent="confirmAdminSendReservationMessage">
+                    <div class="form-group">
+                        <label for="admin-notify-message">Mensaje</label>
+                        <textarea id="admin-notify-message" rows="5" v-model="notiModel.mensajeTexto" placeholder="Ej. La habitación no está disponible en este momento."></textarea>
+                    </div>
+                    <div class="admin-actions">
+                        <button type="submit" class="btn-primary">Enviar notificación</button>
+                        <button type="button" class="btn-secondary" @click="mostrarCardNotificacion = false">Cancelar</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+        <div class="app-toast" :class="toast.tipo === 'error' ? 'toast-error' : 'toast-ok'" v-if="toast.visible">
+            {{ toast.texto }}
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

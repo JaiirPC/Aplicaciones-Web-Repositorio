@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hotel Uleam - Gestión Hotelera</title>
+    <link rel="stylesheet" href="styles.css">
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+</head>
+<body>
+    <div id="app">
+        <div id="single-login-view" class="single-login" v-if="['LoginCliente', 'RegistroCliente', 'LoginAdmin'].includes(currentRole)">
+            
+            <div id="card-login-usuario" class="card" v-if="currentRole === 'LoginCliente'">
+                <h3>Login Cliente</h3>
+                <form @submit.prevent="validarLoginUsuario">
+                    <div class="form-group">
+                        <label>Correo electrónico:</label>
+                        <input type="email" v-model="loginUsuario.email" placeholder="tu.correo@ejemplo.com">
+                        <div class="error-msg" v-if="erroresLoginUsuario.email">Ingresa el correo con el que te registraste.</div>
+                    </div>
+                    <div class="form-group">
+                        <label>Contraseña:</label>
+                        <input type="password" v-model="loginUsuario.pass" placeholder="Contraseña de usuario">
+                        <div class="error-msg" v-if="erroresLoginUsuario.pass">La contraseña no puede estar vacía.</div>
+                    </div>
+                    <div style="display:flex; gap:10px; align-items:center;">
+                        <button type="submit" class="btn-primary">Iniciar Sesión</button>
+                        <button type="button" @click="mostrarRegistroUsuario" class="btn-secondary">Registrarse</button>
+                        <button type="button" @click="volverALogin" class="btn-secondary">Regresar</button>
+                    </div>
+                </form>
+            </div>
+
+            <div id="card-register-usuario" class="card" v-if="currentRole === 'RegistroCliente'">
+                <h3>Registro de Nuevo Cliente</h3>
+                <form @submit.prevent="registrarUsuario">
+                    <div class="form-group">
+                        <label>Cédula / ID (10 dígitos):</label>
+                        <input type="text" v-model="registro.id" @input="filtrarEntradaNumeros($event, 'registro', 'id')" maxlength="10" placeholder="Ej: 1314567890">
+                        <div class="error-msg" v-if="erroresRegistro.id">Debes ingresar exactamente 10 dígitos.</div>
+                    </div>
+                    <div class="form-group">
+                        <label>Nombre (Solo letras):</label>
+                        <input type="text" v-model="registro.firstname" @input="filtrarEntradaLetras($event, 'registro', 'firstname')" placeholder="Juan">
+                        <div class="error-msg" v-if="erroresRegistro.firstname">El nombre es requerido.</div>
+                    </div>
+                    <div class="form-group">
+                        <label>Apellido (Solo letras):</label>
+                        <input type="text" v-model="registro.lastname" @input="filtrarEntradaLetras($event, 'registro', 'lastname')" placeholder="Pérez">
+                        <div class="error-msg" v-if="erroresRegistro.lastname">El apellido es requerido.</div>
+                    </div>
+                    <div class="form-group">
+                        <label>Correo Institucional:</label>
+                        <input type="text" v-model="registro.email" placeholder="usuario@uleam.ec">
+                        <div class="error-msg" v-if="erroresRegistro.email">Ingresa un correo con '@' válido.</div>
+                    </div>
+                    <div class="form-group">
+                        <label>Teléfono Móvil:</label>
+                        <input type="text" v-model="registro.phone" @input="filtrarEntradaNumeros($event, 'registro', 'phone')" maxlength="10" placeholder="10 dígitos">
+                        <div class="error-msg" v-if="erroresRegistro.phone">Debe contener exactamente 10 números.</div>
+                    </div>
+                    <div class="form-group">
+                        <label>Establecer Contraseña:</label>
+                        <input type="password" v-model="registro.pass" placeholder="Min. 6 caracteres">
+                        <div class="error-msg" v-if="erroresRegistro.pass">La contraseña debe tener al menos 6 caracteres.</div>
+                    </div>
+                    <div class="form-group">
+                        <label>Confirmar Contraseña:</label>
+                        <input type="password" v-model="registro.passConfirm" placeholder="Repite la contraseña">
+                        <div class="error-msg" v-if="erroresRegistro.passConfirm">Las contraseñas no coinciden.</div>
+                    </div>
+                    <div style="display:flex; gap:10px; align-items:center;">
+                        <button type="submit" class="btn-primary">Completar</button>
+                        <button type="button" @click="mostrarLoginUsuario" class="btn-secondary">Volver al Login</button>
+                        <button type="button" @click="volverALogin" class="btn-secondary">Cerrar</button>
+                    </div>
+                </form>
+            </div>
+
+            <div id="card-login-admin" class="card" v-if="currentRole === 'LoginAdmin'">
+                <h3>Login Administrador</h3>
+                <form @submit.prevent="validarLoginAdmin">
+                    <div class="form-group">
+                        <label>Usuario (admin):</label>
+                        <input type="text" v-model="loginAdmin.user" placeholder="Usuario administrador">
+                        <div class="error-msg" v-if="erroresAdmin.user">El usuario no puede estar vacío.</div>
+                    </div>
+                    <div class="form-group">
+                        <label>Contraseña:</label>
+                        <input type="password" v-model="loginAdmin.pass" placeholder="Contraseña de administrador">
+                        <div class="error-msg" v-if="erroresAdmin.pass">La contraseña no puede estar vacía.</div>
+                    </div>
+                    <div style="display:flex; gap:10px; align-items:center;">
+                        <button type="submit" class="btn-secondary">Iniciar Sesión</button>
+                        <button type="button" @click="volverALogin" class="btn-secondary">Regresar</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+        <header class="hero-header" :style="heroStyle">
+
+            <div class="nav-header">
+
+                <nav class="main-nav" v-if="!currentRole || ['LoginCliente', 'RegistroCliente', 'LoginAdmin'].includes(currentRole)">
+                <a href="#habitaciones">Habitaciones</a>
+            <a href="#guia">Guía</a>
+            <a href="#quienes-somos">Quiénes somos</a>
+            <a href="#contacto">Contacto</a>
+        <a href="#" class="nav-btn" @click.prevent="mostrarLoginUsuario">Login</a>
+                </nav>
+                <nav class="main-nav" v-else>
+                    <span style="color: var(--accent-color); font-weight: bold; margin-right: 15px;">Bienvenido, {{ currentUser.name }}</span>
+                </nav>
+            </div>
+            <div class="hero-copy">
+                <h1 v-if="currentRole !== 'Admin'">Hotel ULEAM - Gestión Hotelera</h1>
+                <h1 v-else>Panel de Administrador ULEAM</h1>
+                <div class="hero-actions" v-if="!currentRole || ['LoginCliente', 'RegistroCliente', 'LoginAdmin'].includes(currentRole)">
+                    <button class="btn-primary" @click="mostrarLoginUsuario">Login Cliente</button>
+                    <button class="btn-secondary" @click="mostrarLoginAdmin">Login Admin</button>
+                </div>
+            </div>
+        </header>
+
+        <main class="container">
+            <div v-if="!currentRole || ['LoginCliente', 'RegistroCliente', 'LoginAdmin'].includes(currentRole)">
+                <section id="habitaciones" class="card">
+                    <h2>Habitaciones Destacadas</h2>
+                    <div class="room-grid">
+                        <article class="room-card">
+                            <img src="https://images.unsplash.com/photo-1505693416388-ac5ce068fe85?q=80&w=800" alt="Habitación Individual" />
+                            <div class="room-info">
+                                <h3>Habitación Individual</h3>
+                                <p>Espacio cómodo y funcional para estancia corta con Wi-Fi y baño privado.</p>
+                                <p class="room-price">$35 / noche</p>
+                            </div>
+                    
+                        </article>
+                        <article class="room-card">
+                            <img src="https://images.unsplash.com/photo-1505693416388-ac5ce068fe85?q=80&w=800" alt="Habitación Doble" />
+                            <div class="room-info">
+                                <h3>Habitación Doble</h3>
+                                <p>Ideal para parejas o amigos con una cama doble amplia y ambiente relajante.</p>
+                                <p class="room-price">$50 / noche</p>
+                            </div>
+                        </article>
+                    </div>
+                </section>
+
+    <section id="informacion" class="card" style="max-width: 1000px; margin: 40px auto; padding: 40px;">
+        <div style="display: flex; flex-wrap: wrap; gap: 40px;">
+            
+            <div style="flex: 1; min-width: 300px;">
+                <h2 style="color: var(--primary-color); border-bottom: 2px solid #e0e0e0; padding-bottom: 10px; margin-bottom: 20px;">Quiénes Somos</h2>
+                <p style="color: #555; line-height: 1.6; margin-bottom: 15px;">
+                    En <strong>Hotel ULEAM</strong>, nos dedicamos a ofrecer una experiencia de alojamiento excepcional, combinando el confort moderno con la calidez de nuestro servicio. Fundado como un proyecto de excelencia en hospitalidad, nuestro objetivo es hacer que cada huésped se sienta como en casa.
+                </p>
+                <p style="color: #555; line-height: 1.6;">
+                    Nuestras instalaciones están diseñadas para brindar tranquilidad, seguridad y todas las comodidades necesarias tanto para viajes de negocios como para vacaciones inolvidables.
+                </p>
+            </div>
+
+            
+            <div style="flex: 1; min-width: 300px;">
+                <h2 style="color: var(--primary-color); border-bottom: 2px solid #e0e0e0; padding-bottom: 10px; margin-bottom: 20px;">Guía</h2>
+                <ul style="list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 15px;">
+                    <li style="background: #f9f9f9; padding: 15px; border-radius: 8px; border-left: 4px solid var(--primary-color);">
+                        <h3 style="color: #333; margin: 0 0 5px 0; font-size: 1.1rem;">1. Regístrate</h3>
+                        <p style="color: #666; font-size: 0.9rem; margin: 0;">Crea una cuenta para acceder a tu panel principal.</p>
+                    </li>
+                    <li style="background: #f9f9f9; padding: 15px; border-radius: 8px; border-left: 4px solid var(--primary-color);">
+                        <h3 style="color: #333; margin: 0 0 5px 0; font-size: 1.1rem;">2. Explora</h3>
+                        <p style="color: #666; font-size: 0.9rem; margin: 0;">Revisa habitaciones disponibles y elige tus fechas.</p>
+                    </li>
+                    <li style="background: #f9f9f9; padding: 15px; border-radius: 8px; border-left: 4px solid var(--primary-color);">
+                        <h3 style="color: #333; margin: 0 0 5px 0; font-size: 1.1rem;">3. Reserva</h3>
+                        <p style="color: #666; font-size: 0.9rem; margin: 0;">Confirma y recibe notificaciones sobre el estado.</p>
+                    </li>
+                </ul>
+            </div>
+
+        </div>
+    </section>
+    <section id="contacto" class="card">
+                    <h2>Contacto</h2>
+                    <form @submit.prevent="validarContacto">
+                        <div class="form-group">
+                            <label>Tu Nombre (Solo letras):</label>
+                            <input type="text" v-model="contacto.nombre" @input="filtrarEntradaLetras($event, 'contacto', 'nombre')">
+                            <div class="error-msg" v-if="erroresContacto.nombre">El nombre es obligatorio.</div>
+                        </div>
+                        <div class="form-group">
+                            <label>Teléfono (Solo números):</label>
+                            <input type="text" v-model="contacto.telefono" @input="filtrarEntradaNumeros($event, 'contacto', 'telefono')" maxlength="10">
+                            <div class="error-msg" v-if="erroresContacto.telefono">Obligatorio 7 a 10 números.</div>
+                        </div>
+                        <div class="form-group">
+                            <label>Correo Electrónico:</label>
+                            <input type="text" v-model="contacto.correo">
+                            <div class="error-msg" v-if="erroresContacto.correo">Ingresa correo válido.</div>
+                        </div>
+                        <div class="form-group">
+                            <label>Mensaje:</label>
+                            <textarea rows="3" v-model="contacto.mensaje"></textarea>
+                            <div class="error-msg" v-if="erroresContacto.mensaje">El mensaje no puede estar vacío.</div>
+                        </div>
+                        <button type="submit" class="btn-secondary">Enviar Mensaje</button>
+                    </form>
+                </section>
+            </div>
+
+            <div id="section-usuario" class="card" v-if="currentRole === 'Cliente'">
+                <div class="nav-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px;">
+                    <h2 style="margin: 0;">Cliente ULEAM - Panel de Control</h2>
+                    <div style="display:flex; gap:10px;">
+                        <a href="client.html" style="text-decoration:none; display:flex;">
+                            <button type="button" class="btn-secondary" style="width:auto; margin:0;">Panel completo</button>
+                        </a>
+                        <button type="button" class="btn-danger" style="width: auto; margin: 0;" @click="cerrarSesion">Cerrar Sesión</button>
+                    </div>
+                </div>
+                <div class="grid-3-columnas user-stats" style="margin-top: 20px; gap: 18px;">
+                    <div class="stat-card"><span>{{ rooms.length }}</span><p>Total Habitaciones</p></div>
+                    <div class="stat-card"><span>{{ reporteHabitacionesDisponibles }}</span><p>Disponibles Ahora</p></div>
+                    <div class="stat-card"><span>{{ misReservasActivas.length }}</span><p>Tus Reservas Activas</p></div>
+                </div>
+            </div>
+
+            <div id="section-admin" class="card" v-if="currentRole === 'Admin'">
+                <div class="nav-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px;">
+                    <h2 style="margin: 0;">Panel Administrativo - ULEAM</h2>
+                    <div style="display:flex; gap:10px;">
+                        <a href="admin.html" style="text-decoration:none; display:flex;">
+                            <button type="button" class="btn-secondary" style="width:auto; margin:0;">Panel completo</button>
+                        </a>
+                        <button type="button" class="btn-danger" style="width: auto; margin: 0;" @click="cerrarSesion">Cerrar Sesión</button>
+                    </div>
+                </div>
+                <div class="admin-topbar" style="margin-top:15px;">
+                    <button :class="['btn-primary', vistaActualAdmin === 'basic-info' ? '' : 'btn-secondary']" @click="cambiarTabAdmin('basic-info')">Resumen</button>
+                    <button :class="['btn-primary', vistaActualAdmin === 'room-management' ? '' : 'btn-secondary']" @click="cambiarTabAdmin('room-management')">Habitaciones</button>
+                    <button :class="['btn-primary', vistaActualAdmin === 'reservations' ? '' : 'btn-secondary']" @click="cambiarTabAdmin('reservations')">Reservas</button>
+                </div>
+                <div v-if="vistaActualAdmin === 'basic-info'" style="margin-top:20px;">
+                    <div class="grid-3-columnas user-stats" style="gap: 15px;">
+                        <div class="stat-card"><span>{{ reporteTotalReservas }}</span><p>Solicitudes Totales</p></div>
+                        <div class="stat-card"><span>{{ reporteReservasActivas }}</span><p>Reservas Vigentes</p></div>
+                        <div class="stat-card"><span>${{ reporteIngresosEstimados }}</span><p>Ingresos Totales</p></div>
+                    </div>
+                </div>
+                <div v-if="vistaActualAdmin === 'room-management'" style="margin-top:20px;">
+                    <table class="data-table">
+                        <thead><tr><th>ID</th><th>Tipo</th><th>Estado</th><th>Precio</th></tr></thead>
+                        <tbody><tr v-for="rm in rooms" :key="rm.id"><td>{{ rm.id }}</td><td>{{ rm.type }}</td><td>{{ rm.status }}</td><td>${{ rm.price }}</td></tr></tbody>
+                    </table>
+                </div>
+                <div v-if="vistaActualAdmin === 'reservations'" style="margin-top:20px;">
+                    <table class="data-table">
+                        <thead><tr><th>Cliente</th><th>Hab.</th><th>Estado</th><th>Acciones</th></tr></thead>
+                        <tbody>
+                            <tr v-for="res in reservations" :key="res.id">
+                                <td>{{ res.clientName }}</td><td>{{ res.roomId }}</td><td>{{ res.status }}</td>
+                                <td><button class="btn-danger" v-if="res.status === 'Activa'" @click="forzarCancelarReservaDirecta(res.id)">Cancelar</button></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </main>
+
+        <div class="app-toast" :class="toast.tipo === 'error' ? 'toast-error' : 'toast-ok'" v-if="toast.visible">
+            {{ toast.texto }}
+        </div>
+    </div>
+    <script src="script.js"></script>
+</body>
+</html>
+
+
+
+
+
+
+
+
+
+

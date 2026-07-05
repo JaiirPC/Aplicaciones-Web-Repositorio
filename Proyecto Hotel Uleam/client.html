@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hotel Uleam - Panel Cliente</title>
+    <link rel="stylesheet" href="styles.css">
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+</head>
+<body>
+    <div id="app">
+        <header class="hero-header">
+            <div class="nav-header">
+                <div class="brand">
+                    
+                </div>
+                <nav class="main-nav">
+                    <a href="index.html" class="nav-btn">Volver al inicio</a>
+                </nav>
+            </div>
+            <div class="hero-copy">
+                <h1>Panel de Cliente</h1>
+                <p>Revisa tu perfil, tus reservas y las notificaciones del administrador desde una página separada.</p>
+            </div>
+        </header>
+
+        <main class="container" id="client-page">
+            <div class="client-panel" v-if="currentRole === 'Cliente' && currentUser">
+                <div class="dashboard-layout">
+                    <aside class="sidebar">
+                        <ul>
+                            <li :class="{active: panelClienteActivo === 'perfil'}" @click="cambiarTabCliente('perfil')">Mi perfil</li>
+                            <li :class="{active: panelClienteActivo === 'habitaciones'}" @click="cambiarTabCliente('habitaciones')">Habitaciones</li>
+                            <li :class="{active: panelClienteActivo === 'reservas'}" @click="cambiarTabCliente('reservas')">Reservas</li>
+                            <li :class="{active: panelClienteActivo === 'opiniones'}" @click="cambiarTabCliente('opiniones')">Opiniones</li>
+                        <li :class="{active: panelClienteActivo === 'notificaciones'}" @click="cambiarTabCliente('notificaciones')" style="display: flex; justify-content: space-between; align-items: center;">
+    Notificaciones
+    <span v-if="misNotificaciones.length > 0" class="notification-badge">{{ misNotificaciones.length }}</span>
+</li>
+                        </ul>
+                    </aside>
+                    <section class="admin-content">
+                        <div id="tab-cliente-perfil" class="tab-content client-tab-content" :class="{active: panelClienteActivo === 'perfil'}">
+                            <div class="admin-topbar">
+                                <div>
+                                    <h3>Mi panel de cliente</h3>
+                                    <p>Consulta tu perfil, revisa tus reservas y recibe mensajes del administrador sobre el estado de la habitación.</p>
+                                </div>
+                                <button class="btn-danger" style="width:auto;" @click="cerrarSesion">Cerrar Sesión</button>
+                            </div>
+                            <div class="report-grid">
+                                <div class="report-card">
+                                    <span class="admin-summary-label">Habitaciones totales</span>
+                                    <strong class="admin-summary-value">{{ rooms.length }}</strong>
+                                </div>
+                                <div class="report-card">
+                                    <span class="admin-summary-label">Disponibles</span>
+                                    <strong class="admin-summary-value">{{ reporteHabitacionesDisponibles }}</strong>
+                                </div>
+                                <div class="report-card">
+                                    <span class="admin-summary-label">Reservadas</span>
+                                    <strong class="admin-summary-value">{{ habitacionesReservadasCount }}</strong>
+                                </div>
+                                <div class="report-card">
+                                    <span class="admin-summary-label">Notificaciones</span>
+                                    <strong class="admin-summary-value">{{ misNotificaciones.length }}</strong>
+                                </div>
+                            </div>
+                            <div class="profile-card">
+                                <h3>{{ currentUser.name }}</h3>
+                                <p><strong>Correo:</strong> {{ currentUser.email }}</p>
+                                <p><strong>Teléfono:</strong> {{ currentUser.phone }}</p>
+                                <p><strong>Cédula / ID:</strong> {{ currentUser.id }}</p>
+                            </div>
+                        </div>
+
+                        <div id="tab-cliente-habitaciones" class="tab-content client-tab-content" :class="{active: panelClienteActivo === 'habitaciones'}">
+                            <h3>Habitaciones</h3>
+                            <div class="card">
+                                <table class="table-wrapper">
+                                    <thead>
+                                        <tr>
+                                            <th>ID</th>
+                                            <th>Tipo</th>
+                                            <th>Tamaño</th>
+                                            <th>Wi-Fi</th>
+                                            <th>Estado</th>
+                                            <th>Precio</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr v-for="rm in rooms" :key="rm.id">
+                                            <td>{{ rm.id }}</td>
+                                            <td>{{ rm.type }}</td>
+                                            <td>{{ rm.size }}</td>
+                                            <td>{{ rm.wifi ? 'Sí' : 'No' }}</td>
+                                            <td><room-status-badge :status="rm.status"></room-status-badge></td>
+                                            <td>${{ rm.price }}</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                            <div class="card">
+                                <h3>Reservar o Cancelar Habitación</h3>
+                                <form @submit.prevent="procesarReserva">
+                                    <div class="form-group">
+                                        <label for="sel-habitacion">Seleccionar Habitación:</label>
+                                        <select id="sel-habitacion" v-model="nuevaReserva.roomId">
+                                            <option value="">-- Seleccione una opción --</option>
+                                            <option v-for="rm in habitacionesDisponibles" :key="rm.id" :value="rm.id">Habitación {{ rm.id }} - {{ rm.type }} (${{ rm.price }}/noche)</option>
+                                        </select>
+                                    </div>
+
+                                    <div class="form-group">
+                                        <label for="fecha-entrada">Fecha de entrada:</label>
+                                        <input type="date" id="fecha-entrada" v-model="nuevaReserva.checkIn">
+                                        <div id="err-entrada" class="error-msg" v-if="erroresReserva.entrada">La fecha de entrada no puede estar vacía.</div>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="fecha-salida">Fecha de salida:</label>
+                                        <input type="date" id="fecha-salida" v-model="nuevaReserva.checkOut">
+                                        <div id="err-salida" class="error-msg" v-if="erroresReserva.salida">La fecha de salida no puede estar vacía.</div>
+                                    </div>
+                                    <div style="display:flex; gap:10px; flex-wrap:wrap;">
+                                        <button type="submit" class="btn-secondary">Reservar Habitación</button>
+                                        <button type="button" class="btn-danger" @click="cancelarReservaClienteActiva">Cancelar Reserva Activa</button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+
+                        <div id="tab-cliente-reservas" class="tab-content client-tab-content" :class="{active: panelClienteActivo === 'reservas'}">
+                            <h3>Historial de Reservas</h3>
+                            <div class="card">
+                                <table class="table-wrapper">
+                                    <thead>
+                                        <tr>
+                                            <th>ID Reserva</th>
+                                            <th>Habitación</th>
+                                            <th>Entrada</th>
+                                            <th>Salida</th>
+                                            <th>Estado</th>
+                                            <th>Acción</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr v-for="res in misReservasHistorial" :key="res.id">
+                                            <td>{{ res.id }}</td>
+                                            <td>{{ res.roomId }}</td>
+                                            <td>{{ res.checkIn }}</td>
+                                            <td>{{ res.checkOut }}</td>
+                                            <td><room-status-badge :status="res.status"></room-status-badge></td>
+                                            <td>
+                                                <button class="btn-danger" style="width:auto;" v-if="res.status === 'Activa'" @click="forzarCancelarReservaDirecta(res.id)">Cancelar</button>
+                                                <button class="btn-secondary" style="width:auto; margin-left:6px;" v-if="res.status === 'Activa'" @click="abrirTerminarReserva(res)">Terminar Reservación</button>
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <div id="tab-cliente-opiniones" class="tab-content client-tab-content" :class="{active: panelClienteActivo === 'opiniones'}">
+                            <h3>Opiniones de Huéspedes</h3>
+                            <div class="card">
+                                <div class="notification-list">
+                                    <div class="review-card" v-for="op in reviews" :key="op.id">
+                                        <h3 style="margin:0 0 6px 0; border:none;">Habitación {{ op.roomId }} &mdash; {{ op.roomType }}</h3>
+                                        <p style="margin:2px 0; color:#666; font-size:0.85rem;">{{ op.clientName }} · {{ op.fecha }}</p>
+                                        <p style="margin:8px 0 0 0;">{{ op.comentario }}</p>
+                                    </div>
+                                    <p class="reservation-empty" v-if="reviews.length === 0">Aún no hay opiniones registradas.</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div id="tab-cliente-notificaciones" class="tab-content client-tab-content" :class="{active: panelClienteActivo === 'notificaciones'}">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                                <h3 style="margin: 0; border: none;">Notificaciones</h3>
+                                <button class="btn-primary" style="width: auto;" v-if="misNotificaciones.length > 0" @click="limpiarMisNotificaciones">
+                                    Marcar todas como leídas
+                                </button>
+                            </div>
+                            <div class="card">
+                                <div class="notification-list">
+                                    <div class="reservation-card" v-for="n in misNotificaciones" :key="n.id">
+                                        <div class="reservation-card-content">
+                                            <p><strong>Habitación {{ n.roomId }}</strong> &mdash; {{ n.date }}</p>
+                                            <p>{{ n.text }}</p>
+                                        </div>
+                                    </div>
+                                    <p class="reservation-empty" v-if="misNotificaciones.length === 0">No tienes notificaciones por el momento.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+                </div>
+            </div>
+
+            <div class="card" v-else>
+                <h3>No has iniciado sesión</h3>
+                <p>Inicia sesión como cliente desde la página principal para ver tu panel.</p>
+                <a href="index.html" class="btn-primary" style="display:inline-block; width:auto; text-decoration:none; text-align:center;">Ir al inicio</a>
+            </div>
+        </main>
+
+        <div id="room-preview-modal" class="notification-modal" aria-hidden="true" v-if="mostrarPreviaHabitacion && habitacionSeleccionada">
+            <div class="notification-modal-card room-preview-modal-card">
+                <button type="button" class="room-preview-close" @click="cerrarPreviaHabitacion" aria-label="Cerrar">&times;</button>
+                <div class="room-preview">
+                    <div class="room-preview-info">
+                        <h3>Habitación {{ habitacionSeleccionada.type }}</h3>
+                        <p class="room-preview-size">{{ habitacionSeleccionada.size }}</p>
+                        <p>{{ descripcionHabitacion(habitacionSeleccionada) }}</p>
+                        <p><strong>Capacidad máxima:</strong> {{ capacidadHabitacion(habitacionSeleccionada) }}</p>
+                        <p><strong>Detalle:</strong> {{ detalleHabitacion(habitacionSeleccionada) }}</p>
+                    </div>
+                    <div class="room-preview-image" :style="{ backgroundImage: 'url(' + imagenHabitacion(habitacionSeleccionada.size) + ')' }"></div>
+                </div>
+            </div>
+        </div>
+
+        <div id="terminar-reserva-modal" class="notification-modal" aria-hidden="true" v-if="mostrarCardTerminarReserva">
+            <div class="notification-modal-card">
+                <div class="notification-modal-header">
+                    <div>
+                        <p class="notification-modal-kicker">Finalizar estadía</p>
+                        <h3>Terminar Reservación</h3>
+                    </div>
+                </div>
+                <p class="notification-modal-description">Cuéntanos cómo fue tu experiencia en la Habitación {{ terminarReservaModel.roomId }} ({{ terminarReservaModel.roomType }}).</p>
+                <form @submit.prevent="confirmarTerminarReserva">
+                    <div class="form-group">
+                        <label for="terminar-comentario">Comentario</label>
+                        <textarea id="terminar-comentario" rows="4" v-model="terminarReservaModel.comentario" placeholder="Ej. La habitación estuvo excelente, muy cómoda y limpia."></textarea>
+                        <div class="error-msg" v-if="erroresTerminarReserva.comentario">Escribe un comentario antes de continuar.</div>
+                    </div>
+                    <div class="admin-actions">
+                        <button type="submit" class="btn-primary">Confirmar y dejar opinión</button>
+                        <button type="button" class="btn-secondary" @click="mostrarCardTerminarReserva = false">Cancelar</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <div class="app-toast" :class="toast.tipo === 'error' ? 'toast-error' : 'toast-ok'" v-if="toast.visible">
+            {{ toast.texto }}
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
